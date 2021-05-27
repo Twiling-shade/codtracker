@@ -92,12 +92,13 @@ def pars(user, base, mode):
     try:
         last_id = [data['matches'][i]['matchID'] for i in range(20)]
     except KeyError:
-        cur.execute('INSERT INTO {}database (error, time_error, dumped_json) VALUES (?, ?, ?)'.format(base),
-        (', '.join([mode, user, source]), datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'), json.dumps(data)))
-        data = get_CodApi_data('https://my.callofduty.com/api/papi-client/crm/cod/v2/title/mw/platform/battle/gamer/' + user_url + '/matches/' + mode +'/start/0/end/0/details')
-        source = 'CodApi'
-        last_id = [data['matches'][i]['matchID'] for i in range(20)]
-        if mode == cw:
+        if source != 'CodApi':
+            cur.execute('INSERT INTO {}database (error, time_error, dumped_json) VALUES (?, ?, ?)'.format(base),
+            (', '.join([mode, user, source]), datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'), json.dumps(data)))
+            data = get_CodApi_data('https://my.callofduty.com/api/papi-client/crm/cod/v2/title/mw/platform/battle/gamer/' + user_url + '/matches/' + mode +'/start/0/end/0/details')
+            source = 'CodApi'
+            last_id = [data['matches'][i]['matchID'] for i in range(20)]
+        else:
             last_id = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
     count = 0
     for i in range(19, -1, -1):
