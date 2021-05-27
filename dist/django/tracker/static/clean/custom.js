@@ -308,6 +308,7 @@ function get ( mode, many, user, nick, stats ) {
     }
 
     function show ( d, mode ) {
+        var html = '<img src="/media/'+mode+'_maps/'+ d.map.replace(/\s|'|-|_rm/g, '')+'.gif" alt="Avatar" class="table-image"><div class="table-center"><div class="grid-container-table">';
         if (mode == 'mp' || mode == 'wz') {
             count = 0
             var ldt = ['primaryWeapon', 'secondaryWeapon', 'tactical', 'lethal'];
@@ -322,8 +323,13 @@ function get ( mode, many, user, nick, stats ) {
                         label = d['loadout'][loadout][weapon]['name']
                     }
                     if (label != 'none') {
-                        loadout_html += '<li><a>'+label+'</a><ul>'
                         if (weapon == 'primaryWeapon' || weapon == 'secondaryWeapon') {
+                            console.log(label.length)
+                            if (label.length < 50) {
+                                loadout_html += '<li><a title="'+d['loadout'][loadout][weapon]['name']+'">'+label+'</a><ul>'
+                            } else {
+                                loadout_html += '<li><a title="'+d['loadout'][loadout][weapon]['label']+'">'+d['loadout'][loadout][weapon]['name']+'</a><ul>'
+                            }
                             attachments = ''
                             for (i = 0; i < 5; i++) {
                                 if (d['loadout'][loadout][weapon]['attachments'][i]['name'] != null && d['loadout'][loadout][weapon]['attachments'][i]['name'] != 'none') {
@@ -334,27 +340,42 @@ function get ( mode, many, user, nick, stats ) {
                                 loadout_html += '<li><a>Attachments</a><ul>'+attachments+'</ul></li>'
                                 }
                             }
+                            if (weapon == 'tactical' || weapon == 'lethal') {
+                                loadout_html += '<li><a title="'+d['loadout'][loadout][weapon]['name']+'">'+label+'</a><ul>'
+                            }
                         loadout_html += '</ul></li>'
                     }
                 }
                 function perks () {
-                    if (mode == 'mp') {
-                        perks_name = 'label'
-                    }
-                    if (mode == 'wz') {
-                        perks_name = 'name'
-                    }
                     perks_html = ''
                     obj_perks = ''
                     obj_extraPerks = ''
-                    for (i = 0; i < 3; i++) {
-                        if (d['loadout'][loadout]['perks'][i][perks_name].replace(/\s|specialty_/g, '') != 'null' && d['loadout'][loadout]['perks'][i][perks_name] != null) {
-                            obj_perks += '<li><a>'+d['loadout'][loadout]['perks'][i][perks_name].replace(/\s|specialty_/g, '')+'</a></li>'
+                    if (mode == 'mp') {
+                        for (i = 0; i < 3; i++) {
+                            perk = d['loadout'][loadout]['perks'][i]['label']
+                            if (perk != 'null' && perk != null) {
+                                obj_perks += '<li><a title="'+d['loadout'][loadout]['perks'][i]['name']+'">'+perk+'</a></li>'
+                            }
+                        }
+                        for (i = 0; i < 3; i++) {
+                            extraPerk = d['loadout'][loadout]['extraPerks'][i]['label']
+                            if (extraPerk != null && extraPerk != 'null') {
+                                obj_extraPerks += '<li><a title="'+d['loadout'][loadout]['extraPerks'][i]['name']+'">'+extraPerk+'</a></li>'
+                            }
                         }
                     }
-                    for (i = 0; i < 3; i++) {
-                        if (d['loadout'][loadout]['extraPerks'][i][perks_name] != null && d['loadout'][loadout]['extraPerks'][i][perks_name] != 'null') {
-                            obj_extraPerks += '<li><a>'+d['loadout'][loadout]['extraPerks'][i][perks_name].replace(/\s|specialty_/g, '')+'</a></li>'
+                    if (mode == 'wz') {
+                        for (i = 0; i < 3; i++) {
+                            perk = d['loadout'][loadout]['perks'][i]['name'].replace(/\s|specialty_/g, '')
+                            if (perk != 'null' && perk != null) {
+                                obj_perks += '<li><a>'+perk+'</a></li>'
+                            }
+                        }
+                        for (i = 0; i < 3; i++) {
+                            extraPerk = d['loadout'][loadout]['extraPerks'][i]['name'].replace(/\s|specialty_/g, '')
+                            if (extraPerk != null && extraPerk != 'null') {
+                                obj_extraPerks += '<li><a>'+extraPerk+'</a></li>'
+                            }
                         }
                     }
                     if (obj_perks != '') {
@@ -416,9 +437,7 @@ function get ( mode, many, user, nick, stats ) {
                     return ''
                 }
             }
-            var html = '<img src="/media/'+mode+'_maps/'+ d.map.replace(/\s|'|-|_rm/g, '')+
-            '.gif" alt="Avatar" class="table-image"><div class="table-center"><div class="grid-container-table">'+
-            '<ul class="dropdown"><li><a>Loadouts</a><ul>'+final_loadout_html+'</ul></li></ul>'+weapon_stats()
+            html += '<ul class="dropdown"><li><a>Loadouts</a><ul>'+final_loadout_html+'</ul></li></ul>'+weapon_stats()
         }
         for (stats in d) {
             if (['id', 'user', 'username', 'uno', 'clantag', 'timestamp', 'duration', 'kills', 'deaths', 'kdRatio', 'result', 'place', 'totalXp', 'loadout', 'weaponStats'].includes(stats) || d[stats] == null || d[stats] == 0) {

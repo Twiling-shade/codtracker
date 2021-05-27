@@ -51,6 +51,9 @@ class users(models.Model):
     time_all_summary_stats_wz = models.DateTimeField(max_length=25, null=True)
     time_all_summary_stats_cw = models.DateTimeField(max_length=25, null=True)
 
+    def get_user(self):
+        return self.user
+
     def stats(self, mode):
         self.mode = mode
         if mode == 'mp':
@@ -58,6 +61,8 @@ class users(models.Model):
         else:
             result = ''
         return {
+            'id': self.pk,
+            'username': self.username,
             'summary_stats': eval('self.summary_stats_'+mode),
             'all_summary_stats': eval('self.all_summary_stats_'+mode),
             'additional_all_stats': result,
@@ -66,7 +71,9 @@ class users(models.Model):
 
     def dict_json(self):
         return {
+            'id': self.pk,
             'User': self.user,
+            'username': self.username,
             'User_': '/tracker/api/raw/users/{}?format=json'.format(str(self.user).replace('#', '%23')),
             'User_mw': '/tracker/api/raw/mult/{}?format=json'.format(str(self.user).replace('#', '%23')),
             'User_wz': '/tracker/api/raw/warzone/{}?format=json'.format(str(self.user).replace('#', '%23')),
@@ -234,6 +241,12 @@ class wz(models.Model):
     gulagKills = models.IntegerField(null=True)
     teamPlacement = models.IntegerField(null=True)
 
+    objectiveTagDenied = models.IntegerField(null=True)
+    objectiveBrLootChopperBoxOpen = models.IntegerField(null=True)
+    objectiveHack = models.IntegerField(null=True)
+    objectiveTagCollected = models.IntegerField(null=True)
+    objectiveBrGametypeBodycountFinalKill = models.IntegerField(null=True)
+    objectivePerkMarkedTarget = models.IntegerField(null=True)
     objectiveManualFlareMissileRedirect = models.IntegerField(null=True)
     objectiveDestroyedVehicleLight = models.IntegerField(null=True)
     objectiveDestroyedVehicleMedium = models.IntegerField(null=True)
@@ -264,6 +277,12 @@ class wz(models.Model):
     objectiveBrDownEnemyCircle6 = models.IntegerField(null=True)
 
     def dict_json(self):
+        if self.totalXp == None:
+            self.totalXp = ''
+        elif self.totalXp == 0:
+            pass
+        else:
+            self.totalXp = sep(self.totalXp)
         return {
             'Played': str(self.timestamp).replace('TZ', ' ').replace('+00:00', ''),
             'Player': self.username,
@@ -274,7 +293,7 @@ class wz(models.Model):
             'LongesStreak': self.longestStreak,
             'Headshots': self.headshots,
             'DistanceTraveled': self.distanceTraveled,
-            'TotalXp': sep(self.totalXp),
+            'TotalXp': self.totalXp,
         }
 
 
@@ -316,8 +335,10 @@ class cw(models.Model):
     weaponStats = models.JSONField(null=True)
     
     def dict_json(self):
-        if self.accuracy == None or self.accuracy == 0:
+        if self.accuracy == None:
             self.accuracy = ''
+        elif self.accuracy == 0:
+            pass
         else:
             self.accuracy = str(self.accuracy) + '%'
         return {

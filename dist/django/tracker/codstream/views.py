@@ -23,9 +23,9 @@ from .forms import RegUser
 class api(APIView):
     def get(self, request, mode, view, many, user, order):
         error = ''
-        modes = ['wz', 'mp', 'cw']
+        modes = ['wz', 'mp', 'cw', 'users']
         views = ['table', 'raw', 'stats']
-        orders_wz = ['id', 'timestamp', 'kills', 'wallBangs', 'totalXp', 'headshots', 'assists', 'scorePerMinute', 'deaths', 'distanceTraveled',
+        orders_wz = ['id', 'timestamp', 'duration', 'kills', 'wallBangs', 'totalXp', 'headshots', 'assists', 'scorePerMinute', 'deaths', 'distanceTraveled',
         'kdRatio', 'objectiveShieldDamage', 'timePlayed', 'executions', 'nearmisses', 'percentTimeMoving', 'longestStreak',
         'damageDone', 'damageTaken', 'playerCount', 'teamCount', 'challengeXp', 'teamSurvivalTime', 'gulagDeaths', 'gulagKills',
         'teamPlacement', 'objectiveTrophyDefense', 'objectiveMedalScoreSsKillTomaStrike', 'objectiveMedalScoreKillSsHoverJet',
@@ -36,7 +36,7 @@ class api(APIView):
         'objectiveBrDownEnemyCircle4', 'objectiveBrDownEnemyCircle5', 'objectiveMedalScoreSsKillPrecisionAirstrike',
         'objectiveAssistDecoy', 'objectiveBrDownEnemyCircle6', 'objectiveMedalScoreKillSsRadarDrone', 'objectiveDestroyedVehicleHeavy',
         'objectiveDestroyedVehicleLight', 'objectiveDestroyedVehicleMedium']
-        orders_mp = ['id', 'timestamp', 'kills', 'wallBangs', 'totalXp', 'headshots', 'assists', 'scorePerMinute', 'deaths', 'distanceTraveled',
+        orders_mp = ['id', 'timestamp', 'duration', 'kills', 'wallBangs', 'totalXp', 'headshots', 'assists', 'scorePerMinute', 'deaths', 'distanceTraveled',
         'kdRatio', 'timePlayed', 'executions', 'nearmisses', 'percentTimeMoving', 'longestStreak', 'damageDone', 'damageTaken',
         'averageSpeedDuringMatch', 'accuracy', 'shotsLanded', 'shotsMissed', 'suicides', 'shotsFired',
         'objectiveMedalScoreSsKillPrecisionAirstrike', 'objectiveMedalScoreSsKillChopperSupport', 'objectiveMedalScoreSsKillHoverJet',
@@ -49,7 +49,7 @@ class api(APIView):
         'objectiveMedalScoreKillSsHoverJet', 'objectiveShieldDamage', 'objectiveKillConfirmed', 'objectiveExecution',
         'objectiveMedalModeDomSecureBScore', 'objectiveMedalScoreKillSsFuelAirstrike', 'objectiveMedalScoreKillSsRadarDrone',
         'objectiveMedalScoreKillSsScramblerDrone', 'objectiveScrapAssist']
-        orders_cw = ['id', 'timestamp', 'kills', 'xpAtEnd', 'ekiadRatio', 'accuracy', 'shotsLanded', 'highestMultikill', 'ekia', 'headshots', 'assists',
+        orders_cw = ['id', 'timestamp', 'duration', 'kills', 'xpAtEnd', 'ekiadRatio', 'accuracy', 'shotsLanded', 'highestMultikill', 'ekia', 'headshots', 'assists',
         'scorePerMinute', 'deaths', 'damageDealt', 'kdRatio', 'shotsMissed', 'multikills', 'highestStreak', 'hits', 'timePlayed', 'suicides',
         'timePlayedAlive', 'objectives', 'shots', 'shotsFired']
         if mode not in modes:
@@ -80,11 +80,20 @@ class api(APIView):
             return JsonResponse(debug)
         if user == 'all':
             table = eval(mode).objects.order_by(order)[:+many]
+        elif user.isdigit():
+            user_table = users.objects.filter(pk=user)
+            user = [m.get_user() for m in user_table][0]
+            table = eval(mode).objects.filter(user=user).order_by(order)[:+many]
+        elif user == 'id':
+            table = eval(mode).objects.filter(pk=many)
         else:
             table = eval(mode).objects.filter(user=user).order_by(order)[:+many]
         serializer = globals()[mode+'Serializer'](table, many=True)
         if view == 'stats':
-            table = users.objects.order_by(order).filter(user=user)
+            if user.isdigit():
+                table = users.objects.order_by(order).filter(pk=user)
+            else:
+                table = users.objects.order_by(order).filter(user=user)
             data = [m.stats(mode) for m in table]
             response = {'data': data}
         if view == 'table':
@@ -136,20 +145,20 @@ def chart(request, duration):
 
 def tracker(request):
     info = ''
-    Username = ''
+    username = ''
     if request.method == 'POST':
         form = RegUser(request.POST)
         if form.is_valid():
             userlist = [i['user'] for i in users.objects.values('user')]
-            usern = form.cleaned_data['user']
-            mp = form.cleaned_data['mp']
-            wz = form.cleaned_data['wz']
-            cw = form.cleaned_data['cw']
+            user = form.cleaned_data['user']
+            form_mp = form.cleaned_data['mp']
+            form_wz = form.cleaned_data['wz']
+            form_cw = form.cleaned_data['cw']
             base = 'codstream_'
             mp = 'mp'
             wz = 'wz'
             cw = 'cw'
-            if usern not in userlist:
+            if user not in userlist:
                 try:
                     conn = mariadb.connect(
                         user="xxxxx",
@@ -158,39 +167,39 @@ def tracker(request):
                         port=3306,
                         database="xxxxxxxxxxx")
                     cur = conn.cursor()
-                    url = 'https://call-of-duty-modern-warfare.p.rapidapi.com/multiplayer-matches/' + str(usern).replace("#", "%23") +'/battle'
+                    url = 'https://call-of-duty-modern-warfare.p.rapidapi.com/multiplayer-matches/' + str(user).replace("#", "%23") +'/battle'
                     data = requests.get(url, headers={'x-rapidapi-key': "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx", 'x-rapidapi-host': "call-of-duty-modern-warfare.p.rapidapi.com"}).json()
-                    Username = data['matches'][0]['player']['username']
+                    username = data['matches'][0]['player']['username']
                     Uno = data['matches'][0]['player']['uno']
                     try:
                         Clantag = data['matches'][0]['player']['clantag']
                     except:
                         Clantag = None
                     form.save()
-                    users.objects.filter(user=usern).update(username=Username)
-                    users.objects.filter(user=usern).update(uno=Uno)
-                    users.objects.filter(user=usern).update(clantag=Clantag)
+                    users.objects.filter(user=user).update(username=username)
+                    users.objects.filter(user=user).update(uno=Uno)
+                    users.objects.filter(user=user).update(clantag=Clantag)
                     time.sleep(1)
-                    pars(usern, base, mp)
+                    pars(user, base, mp)
                     time.sleep(1)
-                    pars_stats(usern, base, mp)
+                    pars_stats(user, base, mp)
                     time.sleep(1)
-                    pars(usern, base, wz)
+                    pars(user, base, wz)
                     time.sleep(1)
-                    pars_stats(usern, base, wz)
-                    if cw == 1:
-                        pars(usern, base, cw)
+                    pars_stats(user, base, wz)
+                    if form_cw:
+                        pars(user, base, cw)
                         time.sleep(1)
-                        pars_stats(usern, base, cw)
+                        pars_stats(user, base, cw)
                     conn.close()
-                    info = Username + ' successfully registered.'
+                    info = username + ' successfully registered.'
                 except KeyError:
-                    info = usern + ' Not found'
-            elif usern in userlist:
-                users.objects.filter(user=usern).update(mp=mp)
-                users.objects.filter(user=usern).update(wz=wz)
-                users.objects.filter(user=usern).update(cw=cw)
-                info = 'Games for user ' + usern + ' has been updated.'
+                    info = user + ' Not found'
+            elif user in userlist:
+                users.objects.filter(user=user).update(mp=form_mp)
+                users.objects.filter(user=user).update(wz=form_wz)
+                users.objects.filter(user=user).update(cw=form_cw)
+                info = 'Games for user ' + user + ' has been updated.'
         else:
             info = 'Form not valid'
 
